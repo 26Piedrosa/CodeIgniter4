@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CodeIgniter
  *
@@ -43,13 +44,10 @@ use CodeIgniter\CLI\CLI;
 use Config\Services;
 
 /**
- * Creates a new database migration file.
- *
- * @package CodeIgniter\Commands
+ * Creates a new database.
  */
 class CreateDatabase extends BaseCommand
 {
-
 	/**
 	 * The group the command is lumped under
 	 * when listing commands.
@@ -63,7 +61,7 @@ class CreateDatabase extends BaseCommand
 	 *
 	 * @var string
 	 */
-	protected $name = 'db:go';
+	protected $name = 'db:create';
 
 	/**
 	 * the Command's short description
@@ -77,7 +75,7 @@ class CreateDatabase extends BaseCommand
 	 *
 	 * @var string
 	 */
-	protected $usage = 'db:go [db_name]';
+	protected $usage = 'db:create <db_name>';
 
 	/**
 	 * the Command's Arguments
@@ -85,7 +83,7 @@ class CreateDatabase extends BaseCommand
 	 * @var array
 	 */
 	protected $arguments = [
-		'db_name' => 'The database name to create new database',
+		'db_name' => 'The database name to use',
 	];
 
 	/**
@@ -102,38 +100,29 @@ class CreateDatabase extends BaseCommand
 	 */
 	public function run(array $params = [])
 	{
-		helper('inflector');
 		$name = array_shift($params);
 
 		if (empty($name))
 		{
-			$name = CLI::prompt('Database name');
+			$name = CLI::prompt('Database name', null, 'required');
 		}
 
-		if (empty($name))
+		if(ENVIRONMENT != "development")
 		{
-			CLI::write('You must provide a ' . CLI::color('database name', 'red') . '.');
-			return;
+			CLI::write('Before use this feature please set your ' . CLI::color('database connection', 'yellow') . ' and' . CLI::color(' environment', 'yellow') . ', make sure your environment configuration are ' . CLI::color('development', 'yellow') . '.');
+			die();
 		}
 
-		if(!empty($name))
+		try
 		{
-			if(ENVIRONMENT != "development")
-			{
-				CLI::write('Before use this feature please set your ' . CLI::color('database connection', 'yellow') . ' and' . CLI::color(' environment', 'yellow') . ', make sure your environment configuration are ' . CLI::color('development', 'yellow') . '.');
-				die();
-			}
+			$forge = \Config\Database::forge();
+			$forge->createDatabase($name);
 
-			try
-			{
-				$forge = \Config\Database::forge();
-				$forge->createDatabase($name);
-				return CLI::write('Create database ' . CLI::color($name, 'green') . ' successfully');
-			}
-			catch (\Exception $e)
-			{
-				return CLI::write('Database ' . CLI::color($name, 'red') . ' exists');
-			}
+			return CLI::write("Database \"{$name}\" created successfully.", 'green');
+		}
+		catch (\Throwable $e)
+		{
+			return CLI::write('Database ' . CLI::color($name, 'red') . ' exists');
 		}
 	}
 }
